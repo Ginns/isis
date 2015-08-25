@@ -132,6 +132,7 @@ Close all JIRA tickets for the release, or moved to future releases if not yet a
 In JIRA, go to the administration section for the Apache Isis project and update the versions as released.
 
 
+[[_cg_committers_post-release-successful_update-jira_create-new-jira]]
 === Create new JIRA
 
 Create a new JIRA ticket as a catch-all for the _next_ release.

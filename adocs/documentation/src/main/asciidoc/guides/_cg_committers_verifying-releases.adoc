@@ -292,8 +292,6 @@ mvn clean install -o
 mvn -P self-host antrun:run
 ----
 
-If it runs up ok, then it's time to xref:cg.adoc#_cg_committers_verifying-releases[vote]!
-
 
 
 

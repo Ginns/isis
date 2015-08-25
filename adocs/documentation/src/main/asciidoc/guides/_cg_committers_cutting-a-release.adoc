@@ -37,6 +37,38 @@ These discussions should also confirm the version number of the module being rel
 Make sure you have a JIRA ticket open against which to perform all commits.  In most cases a JIRA ticket will have been created at the beginning of the previous release cycle.
 
 
+
+[[_cg_committers_cutting-a-release_set-environment-variables]]
+== Set environment variables
+
+We use environment variables to parameterize as many of the steps as possible.  For example:
+
+[source,bash]
+----
+cd core
+export ISISTMP=/c/tmp              # <1>
+export ISISDEV=1.10.0-SNAPSHOT
+export ISISREL=1.9.0
+export ISISRC=RC1
+export ISISBRANCH=release-$ISISREL
+export ISISJIRA=ISIS-9999          # <2>
+
+env | grep ISIS | sort
+----
+<1> adjust by platform
+<2> set to an "umbrella" ticket for all release activities.  (One should exist already, xref:cg.adoc#_cg_committers_post-release-successful_update-jira_create-new-jira[created at] the beginning of the development cycle now completing).
+
+Obviously, alter `$ISISDEV` and `$ISISREL` as required, and bump `$ISISRC` for re-releasing following an xref:cg.adoc#_cg_committers_post-release-unsuccessful[unsuccessful] releases.
+
+[IMPORTANT]
+====
+Note that the branch name is *not* the same any of the eventual tag names (eg `isis-1.9.0` or `simpleapp-archetype-1.9.0`).
+
+If they did have the same name, then what would happen is that the `maven-release-plugin` would checkout the (HEAD of the) branch and thus upload a SNAPSHOT to the snapshot repository.  What it should of course do is checkout the tag and then upload that to the release staging repository.
+====
+
+
+
 [[_cg_committers_cutting-a-release_pull-down-code-to-release]]
 == Pull down code to release
 
@@ -46,15 +78,13 @@ Set the HEAD of your local git repo to the commit to be released.  This will usu
 ----
 git checkout master
 git pull --ff-only
-git checkout -b isis-1.9.0
+git checkout -b $ISISBRANCH
 ----
 
-All release preparation is done locally; if we are successful, this branch will be merged back into master.
 
+All release preparation is done locally; if we are xref:cg.adoc#_cg_committers_post-release-successful[successful], this branch will be merged back into master.
 
-Double check that the version number of the parent pom should reflect the branch name that you are now on (with a `-SNAPSHOT` suffix).  his will normally have been done already during earlier development; but confirm that it has been updated. If it has not, make the change.
-
-For example, if releasing `core` version `1.9.0`, the POM should read:
+Double check that the version number of the core POM (`core/pom.xml`) should reflect the branch name that you are now on.  For example, if releasing version `1.9.0`, the POM should read:
 
 [source,xml]
 ----
@@ -92,22 +122,14 @@ cd core
 [[_cg_committers_cutting-a-release_releasing-core_set-environment-variables]]
 === Set environment variables
 
-
-We use environment variables to parameterize as many of the steps as possible.
+Set up additional environment variables to represent the core "artifact":
 
 [source,bash]
 ----
-cd core
-export ISISTMP=/c/tmp              # <1>
 export ISISART=isis
-export ISISDEV=1.10.0-SNAPSHOT
-export ISISREL=1.9.0
-export ISISRC=RC1
-
 export ISISCOR="Y"
 env | grep ISIS | sort
 ----
-<1> adjust by platform
 
 
 
@@ -192,7 +214,7 @@ Commit any changes from the preceding steps:
 
 [source,bash]
 ----
-git commit -am "ISIS-nnnn: updates to pom.xml etc for release"
+git commit -am "$ISISJIRA: updates to pom.xml etc for release"
 ----
 
 
@@ -379,26 +401,19 @@ cd ../example/application/simpleapp
 [[_cg_committers_cutting-a-release_releasing-the-archetype_setup-environment-variables]]
 === Setup environment variables
 
-To recreate the `simpleapp` archetype:
+Set up additional environment variables to represent the `simpleapp-archetype` "artifact":
 
 [source,bash]
 ----
-cd example/application/simpleapp
-
-export ISISTMP=/c/tmp                   # <1>
 export ISISART=simpleapp-archetype
-export ISISDEV=1.10.0-SNAPSHOT
-export ISISREL=1.9.0
-export ISISPAR=$ISISREL                 # <2>
-export ISISRC=RC1
+export ISISPAR=$ISISREL                 # <1>
 
 export ISISCPT=$(echo $ISISART | cut -d- -f2)
 export ISISCPN=$(echo $ISISART | cut -d- -f1)
 
 env | grep ISIS | sort
 ----
-<1> adjust by platform
-<2> `$ISISPAR` is the version of the Apache Isis core that will act as the archetype's parent. Usually this is the same as `$ISISREL`.
+<1> `$ISISPAR` is the version of the Apache Isis core that will act as the archetype's parent. Usually this is the same as `$ISISREL`.
 
 
 [[_cg_committers_cutting-a-release_releasing-the-archetype_check-the-example-app]]
@@ -464,7 +479,7 @@ Then, run the script:
 
 [source,bash]
 ----
-sh ../../../scripts/recreate-archetype.sh ISIS-nnnn
+sh ../../../scripts/recreate-archetype.sh $ISISJIRA
 ----
 
 The script automatically commits changes; if you wish use `git log` and
@@ -552,36 +567,36 @@ The `mvn release:perform` commands will have put release artifacts for both `cor
 
 Log onto http://repository.apache.org[repository.apache.org] (using your ASF LDAP account):
 
-image::{_imagesdir}release-process/nexus-staging-0.png[width="600px",link="{_imagesdir}release-process/nexus-staging-0.png"]
+image::{_imagesdir}release-process/nexus-staging-0.png[width="800px",link="{_imagesdir}release-process/nexus-staging-0.png"]
 
 And then check that the release has been staged (select `staging repositories` from left-hand side):
 
-image::{_imagesdir}release-process/nexus-staging-1.png[width="600px",link="{_imagesdir}release-process/nexus-staging-1.png"]
+image::{_imagesdir}release-process/nexus-staging-1.png[width="800px",link="{_imagesdir}release-process/nexus-staging-1.png"]
 
 If nothing appears in a staging repo you should stop here and work out why.
 
-Assuming that the repo has been populated, make a note of its repo id; this is needed for the voting thread. In the screenshot above the id is `org.apache.isis-008`.
+Assuming that the repo has been populated, make a note of its repo id; this is needed for the voting thread. In the screenshot above the id is `org.apache.isis-1000`.
 
 
 After checking that the staging repository contains the artifacts that you expect you should close the staging repository. This will make it available so that people can check the release.
 
 Press the Close button and complete the dialog:
 
-image::{_imagesdir}release-process/nexus-staging-2.png[width="600px",link="{_imagesdir}release-process/nexus-staging-2.png"]
+image::{_imagesdir}release-process/nexus-staging-2.png[width="800px",link="{_imagesdir}release-process/nexus-staging-2.png"]
 
 Nexus should start the process of closing the repository.
 
-image::{_imagesdir}release-process/nexus-staging-2a.png[width="600px",link="{_imagesdir}release-process/nexus-staging-2a.png"]
+image::{_imagesdir}release-process/nexus-staging-2a.png[width="800px",link="{_imagesdir}release-process/nexus-staging-2a.png"]
 
 All being well, the close should (eventually) complete successfully (keep hitting refresh):
 
-image::{_imagesdir}release-process/nexus-staging-3.png[width="600px",link="{_imagesdir}release-process/nexus-staging-3.png"]
+image::{_imagesdir}release-process/nexus-staging-3.png[width="800px",link="{_imagesdir}release-process/nexus-staging-3.png"]
 
 The Nexus repository manager will also email you with confirmation of a successful close.
 
 If Nexus has problems with the key signature, however, then the close will be aborted:
 
-image::{_imagesdir}release-process/nexus-staging-4.png[width="600px",link="{_imagesdir}release-process/nexus-staging-4.png"]
+image::{_imagesdir}release-process/nexus-staging-4.png[width="800px",link="{_imagesdir}release-process/nexus-staging-4.png"]
 
 Use `gpg --keyserver hkp://pgp.mit.edu --recv-keys nnnnnnnn` to confirm that the key is available.
 
@@ -600,15 +615,18 @@ Push the release branch to origin:
 
 [source,bash]
 ----
-git push -u origin $ISISREL
+git push -u origin $ISISBRANCH
 ----
 
-and also push tags for both core and the archetype:
+and also push tags for both core and the `simpleapp-archetype`:
 
 [source]
 ----
-git push origin refs/tags/isis-$ISISREL-$ISISRC:refs/tags/isis-$ISISREL-$ISISRC
-git push origin refs/tags/simpleapp-archetype-$ISISREL-$ISISRC:refs/tags/simpleapp-archetype-$ISISREL-$ISISRC
+for art in isis simpleapp-archetype
+do
+    echo $a
+    git push origin refs/tags/$art-$ISISREL:refs/tags/$art-$ISISREL-$ISISRC
+done
 git fetch
 ----
 
@@ -642,9 +660,13 @@ And use the following body:
 
 [source,bash]
 ----
+Folks,
+
 I've cut a release for Apache Isis Core and the simpleapp archetype:
+
 * Core 1.9.0
 * SimpleApp Archetype 1.9.0
+
 
 The source code artifacts have been uploaded to staging repositories on repository.apache.org:
 
@@ -653,7 +675,8 @@ The source code artifacts have been uploaded to staging repositories on reposito
 
 For each zip there is a corresponding signature file (append .asc to the zip's url).
 
-In the source code repo the code has been tagged as isis-1.9.0-RC1 and simpleapp-archetype-1.9.0-RC1.
+
+In the source code repo the code has been tagged as isis-1.9.0-RC1 and simpleapp-archetype-1.9.0-RC1; see https://git-wip-us.apache.org/repos/asf?p=isis.git
 
 For instructions on how to verify the release (build from binaries and/or use in Maven directly), see http://isis.apache.org/guides/cg.html#_cg_committers_verifying-releases
 
